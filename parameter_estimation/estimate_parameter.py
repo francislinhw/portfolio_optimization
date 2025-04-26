@@ -9,8 +9,10 @@ tickers = pd.read_csv("选股&数据_zihan/close.csv", index_col=0, parse_dates=
 tickers['Return'] = tickers.groupby('Ticker')['Close'].pct_change()
 tickers = tickers.dropna()
 
+spot_list = tickers.groupby('Ticker')['Close'].last()
 returns = tickers.pivot(columns='Ticker', values='Return')
-corr_matrix = returns.corr().to_numpy()
+corr_matrix = returns.corr()
+corr_matrix.to_csv('parameter_estimation/corr_matrix.csv')
 
 days = 252
 assets_list = []
@@ -55,6 +57,7 @@ for ticker,group in tickers.groupby('Ticker'):
 
 results = {
     'assets': assets_list,
+    'spot': spot_list,
     'mu': mu_list,
     'sigma': sigma_list,
     'gamma': gamma_list,
@@ -65,7 +68,7 @@ results = {
     'v0': v0_list,
     'lambda': lamb_list,
     'jump_mu': jump_mu_list,
-    'jump_sigma': jump_sigma_list
+    'jump_sigma': jump_sigma_list,
 }
 
 results_df = pd.DataFrame(results)
