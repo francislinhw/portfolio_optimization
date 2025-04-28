@@ -1,24 +1,26 @@
 import numpy as np
 from src.market_setup import price_option_from_paths
+import pandas as pd
 
 
-def simulate_cev_paths(S0, r, sigma, gamma, T, dt=1 / 252, n_paths=10000):
-    steps = int(T / dt)
-    S = np.zeros((n_paths, steps + 1))
+def simulate_cev_paths(S0, r, sigma, gamma, T, N=252, n_paths=10000):
+    dt = T / N
+    S = np.zeros((n_paths, N + 1))
     S[:, 0] = S0
 
-    for t in range(1, steps + 1):
+    for t in range(1, N + 1):
         Z = np.random.normal(size=n_paths)
-        dS = r * S[:, t - 1] * dt + sigma * (S[:, t - 1] ** gamma) * np.sqrt(dt) * Z
-        S[:, t] = np.maximum(S[:, t - 1] + dS, 1e-8)  # negative price is not allowed
-
+        dS = (
+            r * S[:, t - 1] * dt
+            + sigma * np.power(np.maximum(S[:, t - 1], 1e-6), gamma) * np.sqrt(dt) * Z
+        )
+        S[:, t] = np.maximum(S[:, t - 1] + dS, 1e-6)  # 防止負數或爆炸
     return S
 
 
 def price_cev(spot, strike, maturity_date, r=0.05, sigma=0.2, gamma=1):
-    from datetime import date
 
-    today = date.today()
+    today = pd.Timestamp.today()
     T = (maturity_date - today).days / 365  # year
 
     S_paths = simulate_cev_paths(S0=spot, r=r, sigma=sigma, gamma=gamma, T=T)
