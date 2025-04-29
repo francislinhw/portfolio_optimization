@@ -3,7 +3,18 @@ import numpy as np
 from scipy.stats import norm
 from scipy.optimize import brentq, minimize
 from src.cev.pricer import price_cev
-
+from data.volatility.EFA import efa_market_data
+from data.volatility.GLD import gld_market_data
+from data.volatility.NFLX import nflx_market_data
+from data.volatility.NOW import now_market_data
+from data.volatility.NVDA import nvda_market_data
+from data.volatility.PANW import panw_market_data
+from data.volatility.PLTR import pltr_market_data
+from data.volatility.TSLA import tsla_market_data
+from data.volatility.QQQ import qqq_market_data
+from data.volatility.VISA import visa_market_data
+from data.volatility.XLE import xle_market_data
+from data.volatility.XLF import xlf_market_data
 import matplotlib.pyplot as plt
 
 
@@ -132,130 +143,68 @@ def calibrate_gamma(market_data, spot, sigma, r=0.05):
     return result.x[0]
 
 
-market_data = pd.DataFrame(
-    [
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 71.0,
-            "market_iv": 27.00 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 71.5,
-            "market_iv": 26.80 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 72.0,
-            "market_iv": 26.60 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 72.5,
-            "market_iv": 26.40 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 73.0,
-            "market_iv": 26.20 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 73.5,
-            "market_iv": 26.00 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 74.0,
-            "market_iv": 25.80 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 74.5,
-            "market_iv": 25.60 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 75.0,
-            "market_iv": 25.40 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 75.5,
-            "market_iv": 25.20 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 76.0,
-            "market_iv": 25.00 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 76.5,
-            "market_iv": 24.80 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 77.0,
-            "market_iv": 24.60 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 77.5,
-            "market_iv": 24.40 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 78.0,
-            "market_iv": 24.20 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 78.5,
-            "market_iv": 24.00 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 79.0,
-            "market_iv": 23.80 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 79.5,
-            "market_iv": 23.60 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 80.0,
-            "market_iv": 23.40 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 80.5,
-            "market_iv": 23.20 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 81.0,
-            "market_iv": 23.00 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 81.5,
-            "market_iv": 22.80 / 100,
-        },
-        {
-            "expiry_date": pd.to_datetime("2026-03-20"),
-            "strike": 82.0,
-            "market_iv": 22.60 / 100,
-        },
+def mainCalibration(market_data, spot, r=0.05):
+    sigma_market = find_sigma_from_market(market_data, spot=spot)
+    best_gamma = calibrate_gamma(market_data, spot=spot, sigma=sigma_market)
+    print("Best gamma:", best_gamma)
+
+    # 畫 Vol Smile
+    plot_vol_smile(market_data, spot=spot, sigma=sigma_market, gamma_best=best_gamma)
+    result = {
+        "gamma": best_gamma,
+        "sigma": sigma_market,
+    }
+    return result
+
+
+if __name__ == "__main__":
+    all_result = []
+    stock_list = [
+        "EFA",
+        "GLD",
+        "NFLX",
+        "NOW",
+        "NVDA",
+        "PANW",
+        "PLTR",
+        "TSLA",
+        "QQQ",
+        "VISA",
+        "XLE",
+        "XLF",
     ]
-)
-
-# 你可以這樣用：
-sigma_market = find_sigma_from_market(market_data, spot=78.29)
-best_gamma = calibrate_gamma(market_data, spot=78.29, sigma=sigma_market)
-print("Best gamma:", best_gamma)
-
-# 畫 Vol Smile
-plot_vol_smile(market_data, spot=78.29, sigma=sigma_market, gamma_best=best_gamma)
+    market_data_dict = {
+        "EFA": efa_market_data,
+        "GLD": gld_market_data,
+        "NFLX": nflx_market_data,
+        "NOW": now_market_data,
+        "NVDA": nvda_market_data,
+        "PANW": panw_market_data,
+        "PLTR": pltr_market_data,
+        "TSLA": tsla_market_data,
+        "QQQ": qqq_market_data,
+        "VISA": visa_market_data,
+        "XLE": xle_market_data,
+        "XLF": xlf_market_data,
+    }
+    spot_dict = {
+        "EFA": 84.640,
+        "GLD": 303.950,
+        "NFLX": 1046.090,
+        "NOW": 810.620,
+        "NVDA": 102.208,
+        "PANW": 167.795,
+        "PLTR": 100.407,
+        "TSLA": 251.770,
+        "QQQ": 454.600,
+        "VISA": 333.820,
+        "XLE": 81.065,
+        "XLF": 47.675,
+    }
+    for stock in stock_list:
+        market_data = market_data_dict[stock]
+        spot = spot_dict[stock]
+        result = mainCalibration(market_data, spot=spot, r=0.05)
+        all_result.append({"stock": stock, "result": result})
+    all_result_df = pd.DataFrame(all_result)
+    all_result_df.to_csv("calibration_cev_result.csv", index=False)
