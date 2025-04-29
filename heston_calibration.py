@@ -3,6 +3,19 @@ import pandas as pd
 from scipy.optimize import minimize, brentq
 from scipy.stats import norm
 import cmath
+from data.volatility.EFA import efa_market_data
+from data.volatility.GLD import gld_market_data
+from data.volatility.NFLX import nflx_market_data
+from data.volatility.NOW import now_market_data
+from data.volatility.NVDA import nvda_market_data
+from data.volatility.PANW import panw_market_data
+from data.volatility.PLTR import pltr_market_data
+from data.volatility.TSLA import tsla_market_data
+from data.volatility.QQQ import qqq_market_data
+from data.volatility.VISA import visa_market_data
+from data.volatility.XLE import xle_market_data
+from data.volatility.XLF import xlf_market_data
+
 
 import matplotlib.pyplot as plt
 
@@ -281,22 +294,86 @@ market_data = pd.DataFrame(
 )
 
 
-def find_sigma_from_market(market_data, spot):
-    market_data["moneyness"] = np.abs(market_data["strike"] - spot)
-    atm_row = market_data.loc[market_data["moneyness"].idxmin()]
-    sigma_market = atm_row["market_iv"]
-    print(
-        f"Selected ATM strike: {atm_row['strike']}, Market IV (sigma): {sigma_market*100:.2f}%"
+def mainCalibration(market_data, spot=78.29, r=0.05):
+
+    def find_sigma_from_market(market_data, spot):
+        market_data["moneyness"] = np.abs(market_data["strike"] - spot)
+        atm_row = market_data.loc[market_data["moneyness"].idxmin()]
+        sigma_market = atm_row["market_iv"]
+        print(
+            f"Selected ATM strike: {atm_row['strike']}, Market IV (sigma): {sigma_market*100:.2f}%"
+        )
+        return sigma_market
+
+    sigma_market = find_sigma_from_market(market_data, spot=spot)
+    best_params = calibrate_heston(market_data, spot, r, sigma_market)
+    print("Best Heston Parameters: kappa, theta, rho")
+    print(best_params)
+    plot_heston_vol_smile(
+        market_data,
+        spot=spot,
+        best_params=best_params,
+        r=r,
+        sigma_market=sigma_market,
     )
-    return sigma_market
+    result = {
+        "v0": sigma_market,
+        "kappa": best_params[0],
+        "theta": best_params[1],
+        "volOfVol": best_params[2],
+        "rho": best_params[3],
+    }
+    return result
 
 
-spot = 78.29
-r = 0.05
-sigma_market = find_sigma_from_market(market_data, spot=78.29)
-best_params = calibrate_heston(market_data, spot, r, sigma_market)
-print("Best Heston Parameters: v0, kappa, theta, sigma, rho")
-print(best_params)
-plot_heston_vol_smile(
-    market_data, spot=78.29, best_params=best_params, r=0.05, sigma_market=sigma_market
-)
+if __name__ == "__main__":
+    all_result = []
+    stock_list = [
+        "EFA",
+        "GLD",
+        "NFLX",
+        "NOW",
+        "NVDA",
+        "PANW",
+        "PLTR",
+        "TSLA",
+        "QQQ",
+        "VISA",
+        "XLE",
+        "XLF",
+    ]
+    market_data_dict = {
+        "EFA": efa_market_data,
+        "GLD": gld_market_data,
+        "NFLX": nflx_market_data,
+        "NOW": now_market_data,
+        "NVDA": nvda_market_data,
+        "PANW": panw_market_data,
+        "PLTR": pltr_market_data,
+        "TSLA": tsla_market_data,
+        "QQQ": qqq_market_data,
+        "VISA": visa_market_data,
+        "XLE": xle_market_data,
+        "XLF": xlf_market_data,
+    }
+    spot_dict = {
+        "EFA": 84.640,
+        "GLD": 303.950,
+        "NFLX": 1046.090,
+        "NOW": 810.620,
+        "NVDA": 102.208,
+        "PANW": 167.795,
+        "PLTR": 100.407,
+        "TSLA": 251.770,
+        "QQQ": 454.600,
+        "VISA": 333.820,
+        "XLE": 81.065,
+        "XLF": 47.675,
+    }
+    for stock in stock_list:
+        market_data = market_data_dict[stock]
+        spot = spot_dict[stock]
+        result = mainCalibration(market_data, spot=spot, r=0.05)
+        all_result.append({"stock": stock, "result": result})
+    all_result_df = pd.DataFrame(all_result)
+    all_result_df.to_csv("heston_calibration_result.csv", index=False)
