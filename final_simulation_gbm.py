@@ -65,6 +65,21 @@ def simulate_gbm(mu=0.05):
         )
     return paths
 
+# === 补充：可视化模拟路径 ===
+def plot_simulated_paths(paths, stock_names, num_paths_to_plot=10):
+    T, n_paths, n_stocks = paths.shape
+    time_axis = np.arange(T)
+
+    for i, stock in enumerate(stock_names):
+        plt.figure(figsize=(10, 4))
+        for j in range(min(num_paths_to_plot, n_paths)):
+            plt.plot(time_axis, paths[:, j, i], alpha=0.6)
+        plt.title(f"GBM Simulated Paths for {stock}")
+        plt.xlabel("Day")
+        plt.ylabel("Price")
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
 
 # === 投資組合價值計算器 ===
 def portfolio_final_values(weights, paths):
@@ -107,6 +122,9 @@ def main():
     # 1. 模擬資料
     paths = simulate_gbm()
 
+     # 补充：可视化部分模拟路径（ 6 个样本的前 10 条路径）
+    plot_simulated_paths(paths, ["QQQ", "EFA", "XLF", "XLE", "NVDA", "NFLX"], num_paths_to_plot=10)
+    
     # 2. 原本權重
     pf_original = portfolio_final_values(original_weights, paths)
     original_sharpe = calculate_sharpe(pf_original)
